@@ -1,27 +1,7 @@
 #!/bin/bash
-# Runs on Adastra: find ROCm 5.4 and 7.2 modules, compile hip.c under each, report results.
+# Runs on Adastra: compile hip.c under ROCm 5.5.1 and 7.2.0 directly (no modules needed).
+# ROCm installations are in /opt/rocm-X.Y.Z/ — we invoke hipcc directly.
 # Usage: bash basilisk_runner.sh <workdir> <hip_c_path>
-
-# -----------------------------------------------------------------------
-# 0. Bootstrap the module system BEFORE set -e
-#    (profile scripts return non-zero; set -e would abort the runner)
-# -----------------------------------------------------------------------
-for MODINIT in \
-    /etc/profile.d/modules.sh \
-    /opt/cray/pe/lmod/lmod/init/bash \
-    /usr/share/lmod/lmod/init/bash \
-    /usr/share/modules/init/bash; do
-    if [[ -f "$MODINIT" ]]; then
-        source "$MODINIT" 2>/dev/null || true
-        break
-    fi
-done
-# Adastra: source system profile to populate MODULEPATH (ignore failures)
-if [[ -f /etc/profile.d/z00_lmod.sh ]]; then
-    source /etc/profile.d/z00_lmod.sh 2>/dev/null || true
-fi
-
-set -uo pipefail   # no -e: module commands can return non-zero
 
 WORKDIR=${1:-/tmp/basilisk_hip_$$}
 HIP_C=${2:-$WORKDIR/hip.c}
@@ -37,97 +17,23 @@ echo "Hostname:  $(hostname)"
 echo "Date:      $TIMESTAMP"
 echo ""
 
-echo "Module system: $(type module 2>&1 | head -1)"
-echo "MODULEPATH: ${MODULEPATH:-<empty>}"
-echo ""
+# Note: ROCm 5.4 is not installed on Adastra — using 5.5.1 (closest 5.x) and 7.2.0
+ROCM_VERSIONS=(
+    "rocm551:/opt/rocm-5.5.1"
+    "rocm720:/opt/rocm-7.2.0"
+)
 
 # -----------------------------------------------------------------------
-# 1. Discover available ROCm modules for 5.4 and 7.2
-# -----------------------------------------------------------------------
-echo "--- Available ROCm modules ---"
-module avail rocm 2>&1 | tee "$LOGDIR/module_avail.txt" || true
-
-# Try to find module names matching 5.4.x and 7.2.x
-ROCM54=$(module avail rocm 2>&1 | grep -oE 'rocm[/a-z0-9._-]*5\.4[^ ]*' | head -1 || true)
-ROCM72=$(module avail rocm 2>&1 | grep -oE 'rocm[/a-z0-9._-]*7\.2[^ ]*' | head -1 || true)
-
-echo ""
-echo "Detected ROCm 5.4 module: ${ROCM54:-NOT FOUND}"
-echo "Detected ROCm 7.2 module: ${ROCM72:-NOT FOUND}"
-echo ""
-
-# -----------------------------------------------------------------------
-# 2. Compile function
-# -----------------------------------------------------------------------
-compile_hip_c() {
-    local label=$1
-    local rocm_mod=$2
-    local logfile=$LOGDIR/build_${label}.log
-
-    echo "--- Building: $label ($rocm_mod) ---"
-
-    if [[ -z "$rocm_mod" ]]; then
-        echo "RESULT: SKIP  label=$label  reason=module_not_found"
-        echo "RESULT: SKIP  label=$label  reason=module_not_found" >> "$LOGDIR/summary.txt"
-        return
-    fi
-
-    {
-        echo "=== Build log: $label ==="
-        echo "Module: $rocm_mod"
-        echo "Date: $(date)"
-
-        # Load just the ROCm module (no Cray PE needed for plain hipcc)
-        module purge 2>/dev/null || true
-        module load "$rocm_mod"
-
-        echo "ROCM_PATH=$ROCM_PATH"
-        echo "hipcc version: $(hipcc --version 2>&1 | head -3)"
-
-        # Compile hip.c as HIP C++ (it's a .c file but uses HIP APIs)
-        # We stub out the missing Basilisk headers via -D defines and empty includes.
-        # The goal is to validate the HIP API surface compiles cleanly.
-        local out=$LOGDIR/hip_${label}.o
-
-        hipcc \
-            --std=c++14 \
-            --offload-arch=gfx90a \
-            -DBASILISK_STUB=1 \
-            -x hip \
-            -I"$WORKDIR/stubs" \
-            -c "$HIP_C" \
-            -o "$out" \
-            2>&1
-        local rc=$?
-
-        if [[ $rc -eq 0 ]]; then
-            echo "Build: SUCCESS (exit 0)"
-            echo "Output: $out ($(ls -lh "$out" | awk '{print $5}'))"
-            echo "RESULT: PASS  label=$label  rocm=$rocm_mod"
-            echo "RESULT: PASS  label=$label  rocm=$rocm_mod" >> "$LOGDIR/summary.txt"
-        else
-            echo "Build: FAILED (exit $rc)"
-            echo "RESULT: FAIL  label=$label  rocm=$rocm_mod  exit=$rc"
-            echo "RESULT: FAIL  label=$label  rocm=$rocm_mod  exit=$rc" >> "$LOGDIR/summary.txt"
-        fi
-
-    } 2>&1 | tee "$logfile"
-
-    echo ""
-}
-
-# -----------------------------------------------------------------------
-# 3. Write stub headers so hip.c preprocesses without Basilisk tree
+# Write stub headers so hip.c preprocesses without the full Basilisk tree
 # -----------------------------------------------------------------------
 mkdir -p "$WORKDIR/stubs"
 
-# Minimal stubs for Basilisk-internal headers included by hip.c
 cat > "$WORKDIR/stubs/a32.h" << 'STUBEOF'
 /* stub: a32.h */
 #pragma once
 typedef int  GPUData;
 typedef enum { GPU_READ, GPU_WRITE } SyncMode;
-extern struct { size_t current_size; int fragment_shader; } GPUContext;
+static struct { size_t current_size; int fragment_shader; } GPUContext;
 STUBEOF
 
 cat > "$WORKDIR/stubs/backend.h" << 'STUBEOF'
@@ -138,7 +44,6 @@ typedef struct _Shader Shader;
 #define EXTERNAL_NAME(g) ((g)->name)
 static inline char * str_append(char *s, const char *t){ return (char*)t; }
 static inline char * gpu_errors(char *log, const char *src, void *u, const char *b){ return log; }
-static struct { size_t current_size; int fragment_shader; } GPUContext;
 STUBEOF
 
 cat > "$WORKDIR/stubs/symbols.h" << 'STUBEOF'
@@ -158,16 +63,78 @@ echo "Stub headers written to $WORKDIR/stubs/"
 echo ""
 
 # -----------------------------------------------------------------------
-# 4. Run builds
+# Compile function — uses hipcc directly from ROCM_PATH (no modules)
 # -----------------------------------------------------------------------
 touch "$LOGDIR/summary.txt"
-compile_hip_c "rocm54" "$ROCM54"
-compile_hip_c "rocm72" "$ROCM72"
+
+compile_hip_c() {
+    local label=$1
+    local rocm_path=$2
+    local logfile=$LOGDIR/build_${label}.log
+    local hipcc="$rocm_path/bin/hipcc"
+
+    echo "--- Building: $label ($rocm_path) ---"
+
+    if [[ ! -x "$hipcc" ]]; then
+        echo "RESULT: SKIP  label=$label  reason=hipcc_not_found_at_$rocm_path"
+        echo "RESULT: SKIP  label=$label  reason=hipcc_not_found_at_$rocm_path" >> "$LOGDIR/summary.txt"
+        return
+    fi
+
+    {
+        echo "=== Build log: $label ==="
+        echo "ROCm path: $rocm_path"
+        echo "hipcc:     $hipcc"
+        echo "Date: $(date)"
+        echo ""
+        echo "hipcc version:"
+        "$hipcc" --version 2>&1 | head -5
+        echo ""
+
+        local out=$LOGDIR/hip_${label}.o
+
+        "$hipcc" \
+            --std=c++14 \
+            --offload-arch=gfx90a \
+            -x hip \
+            -I"$WORKDIR/stubs" \
+            -I"$rocm_path/include" \
+            -c "$HIP_C" \
+            -o "$out" \
+            2>&1
+        local rc=$?
+
+        if [[ $rc -eq 0 ]]; then
+            local sz
+            sz=$(ls -lh "$out" 2>/dev/null | awk '{print $5}')
+            echo ""
+            echo "Build: SUCCESS (exit 0) — output $sz"
+            echo "RESULT: PASS  label=$label  rocm=$rocm_path"
+            echo "RESULT: PASS  label=$label  rocm=$rocm_path" >> "$LOGDIR/summary.txt"
+        else
+            echo ""
+            echo "Build: FAILED (exit $rc)"
+            echo "RESULT: FAIL  label=$label  rocm=$rocm_path  exit=$rc"
+            echo "RESULT: FAIL  label=$label  rocm=$rocm_path  exit=$rc" >> "$LOGDIR/summary.txt"
+        fi
+
+    } 2>&1 | tee "$logfile"
+
+    echo ""
+}
 
 # -----------------------------------------------------------------------
-# 5. Summary
+# Run builds for each ROCm version
 # -----------------------------------------------------------------------
-echo ""
+for entry in "${ROCM_VERSIONS[@]}"; do
+    label="${entry%%:*}"
+    rocm_path="${entry##*:}"
+    compile_hip_c "$label" "$rocm_path"
+done
+
+# -----------------------------------------------------------------------
+# Summary
+# -----------------------------------------------------------------------
 echo "=== SUMMARY ==="
 cat "$LOGDIR/summary.txt"
 echo ""
