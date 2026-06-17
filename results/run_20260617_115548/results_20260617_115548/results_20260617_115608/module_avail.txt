@@ -1,0 +1,1 @@
+/home/fdupros/basilisk_hip_20260617_115548/basilisk_runner.sh: line 24: module: command not found
