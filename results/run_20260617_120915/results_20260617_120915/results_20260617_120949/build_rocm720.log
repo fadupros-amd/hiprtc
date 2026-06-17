@@ -1,0 +1,105 @@
+=== Build log: rocm720 ===
+ROCm path: /opt/rocm-7.2.0
+hipcc:     /opt/rocm-7.2.0/bin/hipcc
+Date: Wed Jun 17 12:09:50 CEST 2026
+
+hipcc version:
+HIP version: 7.2.26015-fc0010cf6a
+AMD clang version 22.0.0git (https://github.com/RadeonOpenCompute/llvm-project roc-7.2.0 26014 7b800a19466229b8479a78de19143dc33c3ab9b5)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /lus/home/softs/rocm/7.2.0/lib/llvm/bin
+
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:183:12: warning: variable length arrays in C++ are a Clang extension [-Wvla-cxx-extension]
+  183 |   char ptx[ptxSize];
+      |            ^~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:183:12: note: read of non-const variable 'ptxSize' is not allowed in a constant expression
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:181:10: note: declared here
+  181 |   size_t ptxSize;
+      |          ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:198:12: error: cannot initialize a variable of type 'Shader *' (aka 'struct _Shader *') with an rvalue of type 'void *'
+  198 |   Shader * shader = calloc (1, sizeof (Shader));
+      |            ^        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:210:17: warning: 'hipCtxCreate' is deprecated: This API is marked as deprecated and might not be supported in future releases. For more details please refer https://github.com/ROCm/HIP/blob/develop/docs/reference/deprecated_api_list.md [-Wdeprecated-declarations]
+  210 |     CUDA_CHECK (hipCtxCreate (&ctx, 0, dev));
+      |                 ^
+/lus/home/softs/rocm/7.2.0/lib/llvm/bin/../../../include/hip/hip_runtime_api.h:5948:1: note: 'hipCtxCreate' has been explicitly marked deprecated here
+ 5948 | HIP_DEPRECATED(HIP_DEPRECATED_MSG)
+      | ^
+/lus/home/softs/rocm/7.2.0/lib/llvm/bin/../../../include/hip/hip_runtime_api.h:643:44: note: expanded from macro 'HIP_DEPRECATED'
+  643 | #define HIP_DEPRECATED(msg) __attribute__((deprecated(msg)))
+      |                                            ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:245:28: error: arithmetic on a pointer to void
+  245 |   hipDeviceptr_t gd = ssbo + offset;
+      |                       ~~~~ ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:264:22: warning: more '%' conversions than data arguments [-Wformat-insufficient-args]
+  264 |   fprintf (stderr, "%s:%d: error: not implemented yet\n");
+      |                     ~^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:355:21: error: assigning to 'MyUniform *' from incompatible type 'void *'
+  355 |         shader->uniforms = realloc (shader->uniforms, (nuniforms + 2)*sizeof(MyUniform));
+      |                            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:358:13: warning: ISO C++ requires field designators to be specified in declaration order; field 'size' will be initialized after field 'local' [-Wreorder-init-list]
+  358 |           .local = g->global == 1 ? -1 : g->used - 1,
+      |           ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:357:61: note: previous initialization for field 'size' is here
+  357 |           .location = location, .type = g->type, .nd = nd, .size = size,
+      |                                                                    ^~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:395:13: warning: variable length arrays in C++ are a Clang extension [-Wvla-cxx-extension]
+  395 |       int p[g->nd];
+      |             ^~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:395:13: note: read of non-constexpr variable 'g' is not allowed in a constant expression
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:384:26: note: declared here
+  384 |   for (const MyUniform * g = shader->uniforms; g && g->type; g++) {
+      |                          ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:396:14: error: cannot initialize a variable of type 'long *' with an lvalue of type 'void *'
+  396 |       long * data = pointer;
+      |              ^      ~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:432:7: error: type 'double' cannot be narrowed to 'int' in initializer list [-Wc++11-narrowing]
+  432 |       (region->p.x - X0)/L0*Nl*Dimensions.x,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:432:7: note: insert an explicit cast to silence this issue
+  432 |       (region->p.x - X0)/L0*Nl*Dimensions.x,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |       static_cast<int>(                    )
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:433:7: error: type 'double' cannot be narrowed to 'int' in initializer list [-Wc++11-narrowing]
+  433 |       (region->p.y - Y0)/L0*Nl*Dimensions.x
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:433:7: note: insert an explicit cast to silence this issue
+  433 |       (region->p.y - Y0)/L0*Nl*Dimensions.x
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |       static_cast<int>(                    )
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:475:15: warning: 'hipCtxSynchronize' is deprecated: This API is marked as deprecated and might not be supported in future releases. For more details please refer https://github.com/ROCm/HIP/blob/develop/docs/reference/deprecated_api_list.md [-Wdeprecated-declarations]
+  475 |   CUDA_CHECK (hipCtxSynchronize ());
+      |               ^
+/lus/home/softs/rocm/7.2.0/lib/llvm/bin/../../../include/hip/hip_runtime_api.h:6148:1: note: 'hipCtxSynchronize' has been explicitly marked deprecated here
+ 6148 | HIP_DEPRECATED(HIP_DEPRECATED_MSG)
+      | ^
+/lus/home/softs/rocm/7.2.0/lib/llvm/bin/../../../include/hip/hip_runtime_api.h:643:44: note: expanded from macro 'HIP_DEPRECATED'
+  643 | #define HIP_DEPRECATED(msg) __attribute__((deprecated(msg)))
+      |                                            ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:476:15: warning: 'hipCtxDestroy' is deprecated: This API is marked as deprecated and might not be supported in future releases. For more details please refer https://github.com/ROCm/HIP/blob/develop/docs/reference/deprecated_api_list.md [-Wdeprecated-declarations]
+  476 |   CUDA_CHECK (hipCtxDestroy (ctx));
+      |               ^
+/lus/home/softs/rocm/7.2.0/lib/llvm/bin/../../../include/hip/hip_runtime_api.h:5963:1: note: 'hipCtxDestroy' has been explicitly marked deprecated here
+ 5963 | HIP_DEPRECATED(HIP_DEPRECATED_MSG)
+      | ^
+/lus/home/softs/rocm/7.2.0/lib/llvm/bin/../../../include/hip/hip_runtime_api.h:643:44: note: expanded from macro 'HIP_DEPRECATED'
+  643 | #define HIP_DEPRECATED(msg) __attribute__((deprecated(msg)))
+      |                                            ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:483:17: warning: 'hipCtxSynchronize' is deprecated: This API is marked as deprecated and might not be supported in future releases. For more details please refer https://github.com/ROCm/HIP/blob/develop/docs/reference/deprecated_api_list.md [-Wdeprecated-declarations]
+  483 |     CUDA_CHECK (hipCtxSynchronize ());
+      |                 ^
+/lus/home/softs/rocm/7.2.0/lib/llvm/bin/../../../include/hip/hip_runtime_api.h:6148:1: note: 'hipCtxSynchronize' has been explicitly marked deprecated here
+ 6148 | HIP_DEPRECATED(HIP_DEPRECATED_MSG)
+      | ^
+/lus/home/softs/rocm/7.2.0/lib/llvm/bin/../../../include/hip/hip_runtime_api.h:643:44: note: expanded from macro 'HIP_DEPRECATED'
+  643 | #define HIP_DEPRECATED(msg) __attribute__((deprecated(msg)))
+      |                                            ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:659:28: error: arithmetic on a pointer to void
+  659 |   return cuda_reduce (ssbo + offset*sizeof(real), nb, op);
+      |                       ~~~~ ^
+8 warnings and 7 errors generated when compiling for gfx90a.
+failed to execute:/lus/home/softs/rocm/7.2.0/lib/llvm/bin/clang++  --offload-arch=gfx90a -O3  --std=c++14 -x hip -I/opt/rocm-7.2.0/include -c /home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c -o "/home/fdupros/basilisk_hip_20260617_120915/results_20260617_120949/hip_rocm720.o"
+
+Build: FAILED (exit 1)
+RESULT: FAIL  label=rocm720  rocm=/opt/rocm-7.2.0  exit=1

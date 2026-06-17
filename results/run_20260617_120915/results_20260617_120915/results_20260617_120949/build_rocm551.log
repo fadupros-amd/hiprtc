@@ -1,0 +1,90 @@
+=== Build log: rocm551 ===
+ROCm path: /opt/rocm-5.5.1
+hipcc:     /opt/rocm-5.5.1/bin/hipcc
+Date: Wed Jun 17 12:09:49 CEST 2026
+
+hipcc version:
+HIP version: 5.5.30202-eaf00c0b
+AMD clang version 16.0.0 (https://github.com/RadeonOpenCompute/llvm-project roc-5.5.1 23194 69ef12a7c3cc5b0ccf820bc007bd87e8b3ac3037)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /lus/home/softs/rocm/5.5.1/llvm/bin
+
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:198:12: error: cannot initialize a variable of type 'Shader *' (aka '_Shader *') with an rvalue of type 'void *'
+  Shader * shader = calloc (1, sizeof (Shader));
+           ^        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:210:17: warning: 'hipCtxCreate' is deprecated: This API is marked as deprecated and may not be supported in future releases. For more details please refer https://github.com/ROCm-Developer-Tools/HIP/blob/master/docs/markdown/hip_deprecated_api_list.md [-Wdeprecated-declarations]
+    CUDA_CHECK (hipCtxCreate (&ctx, 0, dev));
+                ^
+/lus/home/softs/rocm/5.5.1/include/hip/hip_runtime_api.h:4367:1: note: 'hipCtxCreate' has been explicitly marked deprecated here
+DEPRECATED(DEPRECATED_MSG)
+^
+/lus/home/softs/rocm/5.5.1/include/hip/hip_runtime_api.h:494:41: note: expanded from macro 'DEPRECATED'
+#define DEPRECATED(msg) __attribute__ ((deprecated(msg)))
+                                        ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:245:28: error: arithmetic on a pointer to void
+  hipDeviceptr_t gd = ssbo + offset;
+                      ~~~~ ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:264:22: warning: more '%' conversions than data arguments [-Wformat-insufficient-args]
+  fprintf (stderr, "%s:%d: error: not implemented yet\n");
+                    ~^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:355:21: error: assigning to 'MyUniform *' from incompatible type 'void *'
+        shader->uniforms = realloc (shader->uniforms, (nuniforms + 2)*sizeof(MyUniform));
+                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:358:4: warning: ISO C++ requires field designators to be specified in declaration order; field 'size' will be initialized after field 'local' [-Wreorder-init-list]
+          .local = g->global == 1 ? -1 : g->used - 1,
+          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:357:61: note: previous initialization for field 'size' is here
+          .location = location, .type = g->type, .nd = nd, .size = size,
+                                                                   ^~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:396:14: error: cannot initialize a variable of type 'long *' with an lvalue of type 'void *'
+      long * data = pointer;
+             ^      ~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:432:7: error: type 'double' cannot be narrowed to 'int' in initializer list [-Wc++11-narrowing]
+      (region->p.x - X0)/L0*Nl*Dimensions.x,
+      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:432:7: note: insert an explicit cast to silence this issue
+      (region->p.x - X0)/L0*Nl*Dimensions.x,
+      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      static_cast<int>(                    )
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:433:7: error: type 'double' cannot be narrowed to 'int' in initializer list [-Wc++11-narrowing]
+      (region->p.y - Y0)/L0*Nl*Dimensions.x
+      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:433:7: note: insert an explicit cast to silence this issue
+      (region->p.y - Y0)/L0*Nl*Dimensions.x
+      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      static_cast<int>(                    )
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:475:15: warning: 'hipCtxSynchronize' is deprecated: This API is marked as deprecated and may not be supported in future releases. For more details please refer https://github.com/ROCm-Developer-Tools/HIP/blob/master/docs/markdown/hip_deprecated_api_list.md [-Wdeprecated-declarations]
+  CUDA_CHECK (hipCtxSynchronize ());
+              ^
+/lus/home/softs/rocm/5.5.1/include/hip/hip_runtime_api.h:4531:1: note: 'hipCtxSynchronize' has been explicitly marked deprecated here
+DEPRECATED(DEPRECATED_MSG)
+^
+/lus/home/softs/rocm/5.5.1/include/hip/hip_runtime_api.h:494:41: note: expanded from macro 'DEPRECATED'
+#define DEPRECATED(msg) __attribute__ ((deprecated(msg)))
+                                        ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:476:15: warning: 'hipCtxDestroy' is deprecated: This API is marked as deprecated and may not be supported in future releases. For more details please refer https://github.com/ROCm-Developer-Tools/HIP/blob/master/docs/markdown/hip_deprecated_api_list.md [-Wdeprecated-declarations]
+  CUDA_CHECK (hipCtxDestroy (ctx));
+              ^
+/lus/home/softs/rocm/5.5.1/include/hip/hip_runtime_api.h:4379:1: note: 'hipCtxDestroy' has been explicitly marked deprecated here
+DEPRECATED(DEPRECATED_MSG)
+^
+/lus/home/softs/rocm/5.5.1/include/hip/hip_runtime_api.h:494:41: note: expanded from macro 'DEPRECATED'
+#define DEPRECATED(msg) __attribute__ ((deprecated(msg)))
+                                        ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:483:17: warning: 'hipCtxSynchronize' is deprecated: This API is marked as deprecated and may not be supported in future releases. For more details please refer https://github.com/ROCm-Developer-Tools/HIP/blob/master/docs/markdown/hip_deprecated_api_list.md [-Wdeprecated-declarations]
+    CUDA_CHECK (hipCtxSynchronize ());
+                ^
+/lus/home/softs/rocm/5.5.1/include/hip/hip_runtime_api.h:4531:1: note: 'hipCtxSynchronize' has been explicitly marked deprecated here
+DEPRECATED(DEPRECATED_MSG)
+^
+/lus/home/softs/rocm/5.5.1/include/hip/hip_runtime_api.h:494:41: note: expanded from macro 'DEPRECATED'
+#define DEPRECATED(msg) __attribute__ ((deprecated(msg)))
+                                        ^
+/home/fdupros/basilisk_hip_20260617_120915/src/grid/hip/hip.c:659:28: error: arithmetic on a pointer to void
+  return cuda_reduce (ssbo + offset*sizeof(real), nb, op);
+                      ~~~~ ^
+6 warnings and 7 errors generated when compiling for gfx90a.
+
+Build: FAILED (exit 1)
+RESULT: FAIL  label=rocm551  rocm=/opt/rocm-5.5.1  exit=1

@@ -1,0 +1,2 @@
+RESULT: FAIL  label=rocm551  rocm=/opt/rocm-5.5.1  exit=1
+RESULT: FAIL  label=rocm720  rocm=/opt/rocm-7.2.0  exit=1
