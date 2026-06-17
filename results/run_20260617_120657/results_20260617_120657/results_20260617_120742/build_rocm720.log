@@ -1,0 +1,20 @@
+=== Build log: rocm720 ===
+ROCm path: /opt/rocm-7.2.0
+hipcc:     /opt/rocm-7.2.0/bin/hipcc
+Date: Wed Jun 17 12:07:43 CEST 2026
+
+hipcc version:
+HIP version: 7.2.26015-fc0010cf6a
+AMD clang version 22.0.0git (https://github.com/RadeonOpenCompute/llvm-project roc-7.2.0 26014 7b800a19466229b8479a78de19143dc33c3ab9b5)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /lus/home/softs/rocm/7.2.0/lib/llvm/bin
+
+/home/fdupros/basilisk_hip_20260617_120657/hip.c:54:10: fatal error: '../../ast/symbols.h' file not found
+   54 | #include "../../ast/symbols.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~
+1 error generated when compiling for gfx90a.
+failed to execute:/lus/home/softs/rocm/7.2.0/lib/llvm/bin/clang++  --offload-arch=gfx90a -O3  --std=c++14 -x hip -I/opt/rocm-7.2.0/include -c /home/fdupros/basilisk_hip_20260617_120657/hip.c -o "/home/fdupros/basilisk_hip_20260617_120657/results_20260617_120742/hip_rocm720.o"
+
+Build: FAILED (exit 1)
+RESULT: FAIL  label=rocm720  rocm=/opt/rocm-7.2.0  exit=1
