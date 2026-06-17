@@ -4,10 +4,18 @@
 # Usage: bash basilisk_runner.sh <workdir> <hip_c_path>
 
 WORKDIR=${1:-/tmp/basilisk_hip_$$}
-HIP_C=${2:-$WORKDIR/hip.c}
+HIP_C_SRC=${2:-$WORKDIR/hip.c}
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOGDIR=$WORKDIR/results_$TIMESTAMP
 mkdir -p "$LOGDIR"
+
+# Place hip.c at src/grid/hip/hip.c so relative includes resolve inside WORKDIR:
+#   #include "../../ast/symbols.h"  -> src/ast/symbols.h  (2 levels up from src/grid/hip/)
+#   #include "../gpu/backend.h"     -> src/grid/gpu/backend.h
+#   #include "a32.h"                -> src/grid/hip/a32.h
+mkdir -p "$WORKDIR/src/grid/hip" "$WORKDIR/src/grid/gpu" "$WORKDIR/src/ast"
+cp "$HIP_C_SRC" "$WORKDIR/src/grid/hip/hip.c"
+HIP_C="$WORKDIR/src/grid/hip/hip.c"
 
 echo "=== Basilisk HIP compile test on Adastra ==="
 echo "Workdir:   $WORKDIR"
@@ -28,25 +36,12 @@ ROCM_VERSIONS=(
 # -----------------------------------------------------------------------
 mkdir -p "$WORKDIR/stubs"
 
-# hip.c uses relative includes based on its location in the Basilisk source tree:
-#   #include "../../ast/symbols.h"   -> two dirs up from hip.c location, then ast/
-#   #include "../gpu/backend.h"      -> one dir up from hip.c location, then gpu/
-#   #include "a32.h"                 -> same dir as hip.c
-#
-# hip.c lives at $WORKDIR/hip.c.
-# "../../ast/symbols.h" resolves to: dirname(dirname($WORKDIR))/ast/symbols.h
-# "../gpu/backend.h"    resolves to: dirname($WORKDIR)/gpu/backend.h
-# "a32.h"               resolves to: $WORKDIR/a32.h
-#
-# We create stub files at exactly those relative paths.
+# Stubs placed to match relative includes in hip.c (now at src/grid/hip/hip.c):
+#   "a32.h"               -> src/grid/hip/a32.h
+#   "../gpu/backend.h"    -> src/grid/gpu/backend.h
+#   "../../ast/symbols.h" -> src/ast/symbols.h
 
-WORKDIR_PARENT=$(dirname "$WORKDIR")
-WORKDIR_GRANDPARENT=$(dirname "$WORKDIR_PARENT")
-
-mkdir -p "$WORKDIR_GRANDPARENT/ast"
-mkdir -p "$WORKDIR_PARENT/gpu"
-
-cat > "$WORKDIR/a32.h" << 'STUBEOF'
+cat > "$WORKDIR/src/grid/hip/a32.h" << 'STUBEOF'
 /* stub: a32.h */
 #pragma once
 typedef int  GPUData;
@@ -54,7 +49,7 @@ typedef enum { GPU_READ, GPU_WRITE } SyncMode;
 static struct { size_t current_size; int fragment_shader; } GPUContext;
 STUBEOF
 
-cat > "$WORKDIR_PARENT/gpu/backend.h" << 'STUBEOF'
+cat > "$WORKDIR/src/grid/gpu/backend.h" << 'STUBEOF'
 /* stub: backend.h */
 #pragma once
 typedef struct _Shader Shader;
@@ -64,7 +59,7 @@ static inline char * str_append(char *s, const char *t){ return (char*)t; }
 static inline char * gpu_errors(char *log, const char *src, void *u, const char *b){ return log; }
 STUBEOF
 
-cat > "$WORKDIR_GRANDPARENT/ast/symbols.h" << 'STUBEOF'
+cat > "$WORKDIR/src/ast/symbols.h" << 'STUBEOF'
 /* stub: symbols.h */
 #pragma once
 #define sym_root  100
@@ -78,9 +73,9 @@ cat > "$WORKDIR_GRANDPARENT/ast/symbols.h" << 'STUBEOF'
 STUBEOF
 
 echo "Stub headers written:"
-echo "  $WORKDIR/a32.h"
-echo "  $WORKDIR_PARENT/gpu/backend.h"
-echo "  $WORKDIR_GRANDPARENT/ast/symbols.h"
+echo "  $WORKDIR/src/grid/hip/a32.h"
+echo "  $WORKDIR/src/grid/gpu/backend.h"
+echo "  $WORKDIR/src/ast/symbols.h"
 echo ""
 
 # -----------------------------------------------------------------------
