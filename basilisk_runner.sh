@@ -1,7 +1,27 @@
 #!/bin/bash
 # Runs on Adastra: find ROCm 5.4 and 7.2 modules, compile hip.c under each, report results.
 # Usage: bash basilisk_runner.sh <workdir> <hip_c_path>
-set -euo pipefail
+
+# -----------------------------------------------------------------------
+# 0. Bootstrap the module system BEFORE set -e
+#    (profile scripts return non-zero; set -e would abort the runner)
+# -----------------------------------------------------------------------
+for MODINIT in \
+    /etc/profile.d/modules.sh \
+    /opt/cray/pe/lmod/lmod/init/bash \
+    /usr/share/lmod/lmod/init/bash \
+    /usr/share/modules/init/bash; do
+    if [[ -f "$MODINIT" ]]; then
+        source "$MODINIT" 2>/dev/null || true
+        break
+    fi
+done
+# Adastra: source system profile to populate MODULEPATH (ignore failures)
+if [[ -f /etc/profile.d/z00_lmod.sh ]]; then
+    source /etc/profile.d/z00_lmod.sh 2>/dev/null || true
+fi
+
+set -uo pipefail   # no -e: module commands can return non-zero
 
 WORKDIR=${1:-/tmp/basilisk_hip_$$}
 HIP_C=${2:-$WORKDIR/hip.c}
@@ -17,25 +37,7 @@ echo "Hostname:  $(hostname)"
 echo "Date:      $TIMESTAMP"
 echo ""
 
-# -----------------------------------------------------------------------
-# 0. Bootstrap the module system (needed in non-interactive SSH sessions)
-# -----------------------------------------------------------------------
-# Try standard locations for the Lmod/modules init script
-for MODINIT in \
-    /etc/profile.d/modules.sh \
-    /opt/cray/pe/lmod/lmod/init/bash \
-    /usr/share/lmod/lmod/init/bash \
-    /usr/share/modules/init/bash; do
-    if [[ -f "$MODINIT" ]]; then
-        source "$MODINIT" 2>/dev/null && break
-    fi
-done
-
-# Adastra-specific: also source the system profile to pick up MODULEPATH
-[[ -f /etc/profile ]] && source /etc/profile 2>/dev/null || true
-[[ -f "$HOME/.bashrc" ]] && source "$HOME/.bashrc" 2>/dev/null || true
-
-echo "Module system init: $(type module 2>&1 | head -1)"
+echo "Module system: $(type module 2>&1 | head -1)"
 echo "MODULEPATH: ${MODULEPATH:-<empty>}"
 echo ""
 
@@ -75,14 +77,8 @@ compile_hip_c() {
         echo "Module: $rocm_mod"
         echo "Date: $(date)"
 
-        # Ensure module system is available in this subshell
-        for MODINIT in /etc/profile.d/modules.sh /opt/cray/pe/lmod/lmod/init/bash /usr/share/lmod/lmod/init/bash; do
-            [[ -f "$MODINIT" ]] && source "$MODINIT" 2>/dev/null && break
-        done
-        [[ -f /etc/profile ]] && source /etc/profile 2>/dev/null || true
-
         # Load just the ROCm module (no Cray PE needed for plain hipcc)
-        module purge
+        module purge 2>/dev/null || true
         module load "$rocm_mod"
 
         echo "ROCM_PATH=$ROCM_PATH"
