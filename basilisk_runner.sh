@@ -28,7 +28,25 @@ ROCM_VERSIONS=(
 # -----------------------------------------------------------------------
 mkdir -p "$WORKDIR/stubs"
 
-cat > "$WORKDIR/stubs/a32.h" << 'STUBEOF'
+# hip.c uses relative includes based on its location in the Basilisk source tree:
+#   #include "../../ast/symbols.h"   -> two dirs up from hip.c location, then ast/
+#   #include "../gpu/backend.h"      -> one dir up from hip.c location, then gpu/
+#   #include "a32.h"                 -> same dir as hip.c
+#
+# hip.c lives at $WORKDIR/hip.c.
+# "../../ast/symbols.h" resolves to: dirname(dirname($WORKDIR))/ast/symbols.h
+# "../gpu/backend.h"    resolves to: dirname($WORKDIR)/gpu/backend.h
+# "a32.h"               resolves to: $WORKDIR/a32.h
+#
+# We create stub files at exactly those relative paths.
+
+WORKDIR_PARENT=$(dirname "$WORKDIR")
+WORKDIR_GRANDPARENT=$(dirname "$WORKDIR_PARENT")
+
+mkdir -p "$WORKDIR_GRANDPARENT/ast"
+mkdir -p "$WORKDIR_PARENT/gpu"
+
+cat > "$WORKDIR/a32.h" << 'STUBEOF'
 /* stub: a32.h */
 #pragma once
 typedef int  GPUData;
@@ -36,7 +54,7 @@ typedef enum { GPU_READ, GPU_WRITE } SyncMode;
 static struct { size_t current_size; int fragment_shader; } GPUContext;
 STUBEOF
 
-cat > "$WORKDIR/stubs/backend.h" << 'STUBEOF'
+cat > "$WORKDIR_PARENT/gpu/backend.h" << 'STUBEOF'
 /* stub: backend.h */
 #pragma once
 typedef struct _Shader Shader;
@@ -46,7 +64,7 @@ static inline char * str_append(char *s, const char *t){ return (char*)t; }
 static inline char * gpu_errors(char *log, const char *src, void *u, const char *b){ return log; }
 STUBEOF
 
-cat > "$WORKDIR/stubs/symbols.h" << 'STUBEOF'
+cat > "$WORKDIR_GRANDPARENT/ast/symbols.h" << 'STUBEOF'
 /* stub: symbols.h */
 #pragma once
 #define sym_root  100
@@ -59,7 +77,10 @@ cat > "$WORKDIR/stubs/symbols.h" << 'STUBEOF'
 #define sym_function_definition  (sym_root+21)
 STUBEOF
 
-echo "Stub headers written to $WORKDIR/stubs/"
+echo "Stub headers written:"
+echo "  $WORKDIR/a32.h"
+echo "  $WORKDIR_PARENT/gpu/backend.h"
+echo "  $WORKDIR_GRANDPARENT/ast/symbols.h"
 echo ""
 
 # -----------------------------------------------------------------------
@@ -97,7 +118,6 @@ compile_hip_c() {
             --std=c++14 \
             --offload-arch=gfx90a \
             -x hip \
-            -I"$WORKDIR/stubs" \
             -I"$rocm_path/include" \
             -c "$HIP_C" \
             -o "$out" \
