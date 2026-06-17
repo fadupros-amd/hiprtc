@@ -1,0 +1,19 @@
+=== Build log: rocm551 ===
+ROCm path: /opt/rocm-5.5.1
+hipcc:     /opt/rocm-5.5.1/bin/hipcc
+Date: Wed Jun 17 12:05:50 CEST 2026
+
+hipcc version:
+HIP version: 5.5.30202-eaf00c0b
+AMD clang version 16.0.0 (https://github.com/RadeonOpenCompute/llvm-project roc-5.5.1 23194 69ef12a7c3cc5b0ccf820bc007bd87e8b3ac3037)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /lus/home/softs/rocm/5.5.1/llvm/bin
+
+/home/fdupros/basilisk_hip_20260617_120523/hip.c:54:10: fatal error: '../../ast/symbols.h' file not found
+#include "../../ast/symbols.h"
+         ^~~~~~~~~~~~~~~~~~~~~
+1 error generated when compiling for gfx90a.
+
+Build: FAILED (exit 1)
+RESULT: FAIL  label=rocm551  rocm=/opt/rocm-5.5.1  exit=1
