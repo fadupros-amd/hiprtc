@@ -6,7 +6,6 @@
 #   ATIMESTAMP      - timestamp string for this run
 #   LUMI_TMP        - path on LUMI (for fetching results back)
 
-set timeout 120
 set apassword  $env(APWD)
 set atimestamp $env(ATIMESTAMP)
 set lumi_tmp   $env(LUMI_TMP)
@@ -35,23 +34,37 @@ puts "Workdir:   $adir"
 puts "Repo:      $repo_url"
 
 # -----------------------------------------------------------------------
-# Step 1: Clone repo on Adastra and run basilisk_runner.sh
+# Step 1: SSH to Adastra — clone repo and run runner
 # -----------------------------------------------------------------------
 puts "--- SSH to Adastra: clone + run ---"
+
+# Suppress output while authenticating so password prompt is not shown
+log_user 0
 
 spawn ssh -tt -F $ssh_conf adastra-test \
     "set -e; mkdir -p ${adir} && git clone --depth=1 ${repo_url} ${adir}/hiprtc && bash ${adir}/hiprtc/basilisk_runner.sh ${adir} ${adir}/hiprtc/hip.c 2>&1"
 
+# Handle password prompt silently
+set timeout 30
 expect {
-    "password:" {
-        # Adastra login password — send silently, no echo
+    -re {[Pp]assword:} {
         send "$apassword\r"
-        exp_continue
     }
-    "Password:" {
-        send "$apassword\r"
-        exp_continue
+    "Permission denied" {
+        puts "ERROR: SSH authentication failed"
+        exit 1
     }
+    timeout {
+        puts "ERROR: timeout waiting for SSH prompt"
+        exit 1
+    }
+}
+
+# Re-enable output now that auth is done
+log_user 1
+set timeout 600
+
+expect {
     "RESULT: PASS" {
         puts "  RESULT: PASS[string range $expect_out(buffer) 11 end]"
         exp_continue
@@ -68,15 +81,11 @@ expect {
         puts "Runner completed."
         exp_continue
     }
-    "Permission denied" {
-        puts "ERROR: SSH authentication failed"
-        exit 1
-    }
     eof {
         puts "SSH session ended."
     }
     timeout {
-        puts "WARNING: timeout waiting for runner output"
+        puts "WARNING: timeout waiting for runner (600s exceeded)"
     }
 }
 
@@ -87,16 +96,18 @@ puts "--- Fetching results from Adastra ---"
 set results_dir "${lumi_tmp}/results_${atimestamp}"
 file mkdir $results_dir
 
+log_user 0
 spawn scp -r -F $ssh_conf \
     "adastra-test:${adir}/results_*" \
     "${results_dir}/"
 
+set timeout 60
 expect {
-    "password:" { send "$apassword\r"; exp_continue }
-    "Password:" { send "$apassword\r"; exp_continue }
+    -re {[Pp]assword:} { send "$apassword\r"; exp_continue }
     eof { }
-    timeout { puts "WARNING: results SCP timed out — logs may be partial" }
+    timeout { puts "WARNING: results SCP timed out" }
 }
+log_user 1
 
 puts "Results fetched to: $results_dir"
 puts "BASILISK_MAIN_DONE"
