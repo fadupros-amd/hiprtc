@@ -18,6 +18,28 @@ echo "Date:      $TIMESTAMP"
 echo ""
 
 # -----------------------------------------------------------------------
+# 0. Bootstrap the module system (needed in non-interactive SSH sessions)
+# -----------------------------------------------------------------------
+# Try standard locations for the Lmod/modules init script
+for MODINIT in \
+    /etc/profile.d/modules.sh \
+    /opt/cray/pe/lmod/lmod/init/bash \
+    /usr/share/lmod/lmod/init/bash \
+    /usr/share/modules/init/bash; do
+    if [[ -f "$MODINIT" ]]; then
+        source "$MODINIT" 2>/dev/null && break
+    fi
+done
+
+# Adastra-specific: also source the system profile to pick up MODULEPATH
+[[ -f /etc/profile ]] && source /etc/profile 2>/dev/null || true
+[[ -f "$HOME/.bashrc" ]] && source "$HOME/.bashrc" 2>/dev/null || true
+
+echo "Module system init: $(type module 2>&1 | head -1)"
+echo "MODULEPATH: ${MODULEPATH:-<empty>}"
+echo ""
+
+# -----------------------------------------------------------------------
 # 1. Discover available ROCm modules for 5.4 and 7.2
 # -----------------------------------------------------------------------
 echo "--- Available ROCm modules ---"
@@ -52,6 +74,12 @@ compile_hip_c() {
         echo "=== Build log: $label ==="
         echo "Module: $rocm_mod"
         echo "Date: $(date)"
+
+        # Ensure module system is available in this subshell
+        for MODINIT in /etc/profile.d/modules.sh /opt/cray/pe/lmod/lmod/init/bash /usr/share/lmod/lmod/init/bash; do
+            [[ -f "$MODINIT" ]] && source "$MODINIT" 2>/dev/null && break
+        done
+        [[ -f /etc/profile ]] && source /etc/profile 2>/dev/null || true
 
         # Load just the ROCm module (no Cray PE needed for plain hipcc)
         module purge
