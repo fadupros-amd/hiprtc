@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local orchestrator: transfer scripts to LUMI, run basilisk_main.exp on LUMI.
+# Local orchestrator: push latest scripts to GitHub, then trigger run via LUMI → Adastra.
 # Usage: ADASTRA_PASSWORD='...' bash basilisk_hip_test.sh
 set -euo pipefail
 
@@ -13,9 +13,7 @@ LUMI_KEY="$HOME/Mobaxterm/Home/.ssh/FD_moba_lockhart"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LUMI_TMP="/users/fabdupros/tmp/basilisk_hip_${TIMESTAMP}"
 
-AWORKDIR="/tmp/basilisk_hip_${TIMESTAMP}"
-
-# Password must be in environment
+# Password must be in environment — never echoed
 if [[ -z "${ADASTRA_PASSWORD:-}" ]]; then
     echo "ERROR: ADASTRA_PASSWORD env var not set."
     echo "Usage: ADASTRA_PASSWORD='<password>' bash basilisk_hip_test.sh"
@@ -38,28 +36,38 @@ lumi_scp() {
 }
 
 # -----------------------------------------------------------------------
-# Step 1: Create tmp dir on LUMI
+# Step 1: Push latest scripts to GitHub so Adastra clones fresh code
 # -----------------------------------------------------------------------
-echo "--- Creating LUMI tmp dir ---"
+echo "--- Pushing latest scripts to GitHub ---"
+cd "$SCRIPT_DIR"
+git add -A
+if ! git diff --cached --quiet; then
+    git commit -m "$(cat <<EOF
+Update scripts for run $TIMESTAMP
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+    git push origin master
+    echo "Pushed."
+else
+    echo "No changes to push — repo is up to date."
+fi
+cd - > /dev/null
+
+# -----------------------------------------------------------------------
+# Step 2: Create tmp dir on LUMI and SCP the expect script
+# -----------------------------------------------------------------------
+echo "--- Preparing LUMI ---"
 lumi_run "mkdir -p ${LUMI_TMP}"
+lumi_scp "$SCRIPT_DIR/basilisk_main.exp" "${LUMI_USER}@${LUMI_HOST}:${LUMI_TMP}/"
 
 # -----------------------------------------------------------------------
-# Step 2: SCP expect script, runner, and hip.c to LUMI
+# Step 3: Run expect script on LUMI (password passed via env, not args)
 # -----------------------------------------------------------------------
-echo "--- Copying scripts to LUMI ---"
-lumi_scp \
-    "$SCRIPT_DIR/basilisk_main.exp" \
-    "$SCRIPT_DIR/basilisk_runner.sh" \
-    "$SCRIPT_DIR/hip.c" \
-    "${LUMI_USER}@${LUMI_HOST}:${LUMI_TMP}/"
-
-# -----------------------------------------------------------------------
-# Step 3: Run expect script on LUMI
-# -----------------------------------------------------------------------
-echo "--- Running basilisk_main.exp on LUMI ---"
+echo "--- Running expect on LUMI → Adastra ---"
 lumi_run "
     export APWD='${ADASTRA_PASSWORD}'
-    export AWORKDIR='${AWORKDIR}'
     export ATIMESTAMP='${TIMESTAMP}'
     export LUMI_TMP='${LUMI_TMP}'
     expect ${LUMI_TMP}/basilisk_main.exp
@@ -80,13 +88,8 @@ lumi_scp -r \
 # -----------------------------------------------------------------------
 echo ""
 echo "=== FINAL RESULTS ==="
-if ls "$LOCAL_RESULTS"/summary.txt 2>/dev/null; then
-    cat "$LOCAL_RESULTS/summary.txt"
-else
-    # Try to find summary in subdirectory
-    find "$LOCAL_RESULTS" -name "summary.txt" -exec cat {} \; 2>/dev/null || \
-        echo "No summary.txt found — check $LOCAL_RESULTS for build logs"
-fi
+find "$LOCAL_RESULTS" -name "summary.txt" -exec cat {} \; 2>/dev/null || \
+    echo "No summary.txt found — check $LOCAL_RESULTS for build logs"
 
 echo ""
 echo "Workflow complete. Logs: $LOCAL_RESULTS"
