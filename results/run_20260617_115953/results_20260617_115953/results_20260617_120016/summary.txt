@@ -1,0 +1,2 @@
+RESULT: SKIP  label=rocm54  reason=module_not_found
+RESULT: SKIP  label=rocm72  reason=module_not_found
