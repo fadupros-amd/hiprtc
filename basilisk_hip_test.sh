@@ -1,5 +1,6 @@
 #!/bin/bash
-# Local orchestrator: push latest scripts to GitHub, then trigger run via LUMI → Adastra.
+# Local orchestrator: push latest scripts to GitHub (tracking), stage on LUMI,
+# transfer to Adastra via SCP (Adastra has no outbound internet), run runner.
 # Usage: ADASTRA_PASSWORD='...' bash basilisk_hip_test.sh
 set -euo pipefail
 
@@ -36,7 +37,7 @@ lumi_scp() {
 }
 
 # -----------------------------------------------------------------------
-# Step 1: Push latest scripts to GitHub so Adastra clones fresh code
+# Step 1: Push latest scripts to GitHub for progress tracking
 # -----------------------------------------------------------------------
 echo "--- Pushing latest scripts to GitHub ---"
 cd "$SCRIPT_DIR"
@@ -56,16 +57,20 @@ fi
 cd - > /dev/null
 
 # -----------------------------------------------------------------------
-# Step 2: Create tmp dir on LUMI and SCP the expect script
+# Step 2: Stage scripts on LUMI (LUMI->Adastra SCP is the transfer path)
 # -----------------------------------------------------------------------
-echo "--- Preparing LUMI ---"
+echo "--- Staging scripts on LUMI ---"
 lumi_run "mkdir -p ${LUMI_TMP}"
-lumi_scp "$SCRIPT_DIR/basilisk_main.exp" "${LUMI_USER}@${LUMI_HOST}:${LUMI_TMP}/"
+lumi_scp \
+    "$SCRIPT_DIR/basilisk_main.exp" \
+    "$SCRIPT_DIR/basilisk_runner.sh" \
+    "$SCRIPT_DIR/hip.c" \
+    "${LUMI_USER}@${LUMI_HOST}:${LUMI_TMP}/"
 
 # -----------------------------------------------------------------------
-# Step 3: Run expect script on LUMI (password passed via env, not args)
+# Step 3: Run expect script on LUMI (handles Munich hop + Adastra SCP/SSH)
 # -----------------------------------------------------------------------
-echo "--- Running expect on LUMI → Adastra ---"
+echo "--- Running expect on LUMI -> Adastra ---"
 lumi_run "
     export APWD='${ADASTRA_PASSWORD}'
     export ATIMESTAMP='${TIMESTAMP}'
@@ -81,7 +86,7 @@ mkdir -p "$LOCAL_RESULTS"
 echo "--- Fetching results from LUMI ---"
 lumi_scp -r \
     "${LUMI_USER}@${LUMI_HOST}:${LUMI_TMP}/results_${TIMESTAMP}/" \
-    "$LOCAL_RESULTS/" 2>/dev/null || echo "WARNING: no results to fetch (check LUMI logs)"
+    "$LOCAL_RESULTS/" 2>/dev/null || echo "WARNING: no results to fetch (check logs above)"
 
 # -----------------------------------------------------------------------
 # Step 5: Print summary
