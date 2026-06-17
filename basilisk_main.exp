@@ -1,0 +1,116 @@
+#!/usr/bin/env expect
+# Runs on LUMI. SSHes to Adastra via Munich jumphost, transfers files, runs basilisk_runner.sh.
+# Required env vars (set by basilisk_hip_test.sh):
+#   APWD            - Adastra password
+#   AWORKDIR        - working directory on Adastra (absolute path)
+#   ATIMESTAMP      - timestamp string for this run
+#   LUMI_TMP        - path on LUMI where scripts were placed
+
+set timeout 60
+set apassword    $env(APWD)
+set aworkdir     $env(AWORKDIR)
+set atimestamp   $env(ATIMESTAMP)
+set lumi_tmp     $env(LUMI_TMP)
+
+# Write SSH config for Munich ProxyJump
+set ssh_conf "/tmp/adastra_ssh_basilisk_${atimestamp}.conf"
+set fh [open $ssh_conf w]
+puts $fh "Host munich-jump"
+puts $fh "    HostName 89.202.73.144"
+puts $fh "    User fadupros"
+puts $fh "    IdentityFile /users/fabdupros/.ssh/id_ed25519_munich"
+puts $fh "    StrictHostKeyChecking no"
+puts $fh ""
+puts $fh "Host adastra-test"
+puts $fh "    HostName adastra.cines.fr"
+puts $fh "    User fdupros"
+puts $fh "    ProxyJump munich-jump"
+puts $fh "    StrictHostKeyChecking no"
+close $fh
+
+puts "=== basilisk_main.exp: connecting to Adastra ==="
+puts "Workdir: $aworkdir"
+puts "Timestamp: $atimestamp"
+
+# -----------------------------------------------------------------------
+# Step 1: SCP hip.c and basilisk_runner.sh to Adastra
+# -----------------------------------------------------------------------
+puts "--- SCP files to Adastra ---"
+
+spawn scp -F $ssh_conf \
+    $lumi_tmp/hip.c \
+    $lumi_tmp/basilisk_runner.sh \
+    adastra-test:/tmp/
+
+expect {
+    "password:" { send "$apassword\r"; exp_continue }
+    "Permission denied" { puts "SCP ERROR: Permission denied"; exit 1 }
+    eof { }
+    timeout { puts "SCP ERROR: timeout"; exit 1 }
+}
+puts "SCP done."
+
+# -----------------------------------------------------------------------
+# Step 2: SSH to Adastra, set up workdir, run runner
+# -----------------------------------------------------------------------
+puts "--- SSH to Adastra ---"
+
+spawn ssh -tt -F $ssh_conf adastra-test \
+    "bash /tmp/basilisk_runner.sh /tmp/basilisk_hip_${atimestamp} /tmp/hip.c"
+
+set session_output ""
+set prompt_set 0
+
+expect {
+    "Password:" {
+        send "$apassword\r"
+        exp_continue
+    }
+    "password:" {
+        send "$apassword\r"
+        exp_continue
+    }
+    "BASILISK_RUNNER_DONE" {
+        puts "Runner completed."
+        exp_continue
+    }
+    "RESULT: PASS" {
+        puts "  [string trim $expect_out(buffer)]"
+        exp_continue
+    }
+    "RESULT: FAIL" {
+        puts "  [string trim $expect_out(buffer)]"
+        exp_continue
+    }
+    "RESULT: SKIP" {
+        puts "  [string trim $expect_out(buffer)]"
+        exp_continue
+    }
+    eof {
+        puts "SSH session ended."
+    }
+    timeout {
+        puts "WARNING: timeout waiting for runner output"
+    }
+}
+
+# -----------------------------------------------------------------------
+# Step 3: Fetch results back to LUMI
+# -----------------------------------------------------------------------
+puts "--- Fetching results from Adastra ---"
+set results_dir "$lumi_tmp/results_${atimestamp}"
+
+spawn scp -r -F $ssh_conf \
+    "adastra-test:/tmp/basilisk_hip_${atimestamp}/results_*" \
+    $results_dir/
+
+expect {
+    "password:" { send "$apassword\r"; exp_continue }
+    "Password:" { send "$apassword\r"; exp_continue }
+    eof { }
+    timeout { puts "WARNING: results SCP timed out — logs may be partial" }
+}
+
+puts ""
+puts "Results fetched to: $results_dir"
+puts "BASILISK_MAIN_DONE"
